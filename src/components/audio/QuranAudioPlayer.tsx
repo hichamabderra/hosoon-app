@@ -186,7 +186,7 @@ export default function QuranAudioPlayer({
       decodeURI(audio.src) === decodeURI(audioUrl) ||
       (audioUrl && audio.src.endsWith(audioUrl));
 
-    if (sameUrl && (isSwitchingReciterRef.current || isPlaying || isLoading)) {
+    if (sameUrl && (isSwitchingReciterRef.current || !audio.paused)) {
       return;
     }
 

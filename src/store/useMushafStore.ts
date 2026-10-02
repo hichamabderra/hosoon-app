@@ -82,7 +82,7 @@ export const useMushafStore = create<MushafStoreState>()(
       },
 
       nextPage: () => {
-        const { currentPage, thumunPages, thumunId } = get();
+        const { currentPage, thumunPages } = get();
         // If current page is within current thumun and not the last page of thumun:
         const currentIndex = thumunPages.indexOf(currentPage);
         if (currentIndex >= 0 && currentIndex < thumunPages.length - 1) {
@@ -103,7 +103,7 @@ export const useMushafStore = create<MushafStoreState>()(
       },
 
       prevPage: () => {
-        const { currentPage, thumunPages, thumunId } = get();
+        const { currentPage, thumunPages } = get();
         // If current page is within current thumun and not the first page of thumun:
         const currentIndex = thumunPages.indexOf(currentPage);
         if (currentIndex > 0) {

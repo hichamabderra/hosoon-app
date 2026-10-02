@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSwipeable } from "react-swipeable";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   Headphones,
@@ -25,7 +24,7 @@ import {
 } from "@/lib/mushaf-mapping";
 import { useHifzStore } from "@/store/useHifzStore";
 import { formatNum } from "@/lib/format";
-import { thumunShort, thumunTitle } from "@/lib/quran-labels";
+import { thumunTitle } from "@/lib/quran-labels";
 import { vibrateLight } from "@/lib/haptic";
 import QuranAudioPlayer from "../audio/QuranAudioPlayer";
 import { Button } from "../ui/button";
@@ -77,16 +76,12 @@ function ThumunReaderContent() {
   const arabic = useHifzStore((s) => s.settings.arabicNumerals);
 
   const [showControls, setShowControls] = useState(true);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadedPage, setLoadedPage] = useState<number | null>(null);
+  const imageLoaded = loadedPage === currentPage;
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const pageInfo = getMushafPageInfo(currentPage);
   const thumun = pageInfo.thumun;
-
-  // Reset image loaded on page change
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [currentPage]);
 
   // Touch swipe support (RTL: swipe left = next page, swipe right = prev page)
   const swipeHandlers = useSwipeable({
@@ -329,7 +324,7 @@ function ThumunReaderContent() {
             key={currentPage}
             src={pageInfo.imageUrl}
             alt={pageInfo.title}
-            onLoad={() => setImageLoaded(true)}
+            onLoad={() => setLoadedPage(currentPage)}
             className={`max-w-full max-h-full object-contain rounded-lg shadow-sm transition-opacity duration-200 ${
               imageLoaded ? "opacity-100" : "opacity-0"
             } ${themeStyles.imgFilter}`}

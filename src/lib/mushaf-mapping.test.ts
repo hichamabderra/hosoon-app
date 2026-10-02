@@ -9,6 +9,13 @@ import {
 } from "./mushaf-mapping";
 
 describe("mushaf-mapping", () => {
+  it("exports correct totals and maps page to thumun", () => {
+    expect(TOTAL_MUSHAF_PAGES).toBe(485);
+    expect(TOTAL_ATHMAN).toBe(480);
+    expect(getThumunFromMushafPage(1)).toBe(1);
+    expect(getThumunFromMushafPage(485)).toBe(480);
+  });
+
   it("maps Thumun 1 to exactly 3 pages [1, 2, 3]", () => {
     const pages = getMushafPagesForThumun(1);
     expect(pages).toEqual([1, 2, 3]);
