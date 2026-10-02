@@ -125,11 +125,10 @@ export default function HomeTab({ tasks, dayTasks, currentDay }: Props) {
               icon={<BookOpenCheck className="w-4 h-4" />}
               onSession={() =>
                 openSession({
-                  kind: "khatma",
+                  kind: "khatma_recite",
                   day: currentDay,
                   thumuns: [],
                   reciteJuzs: tasks.reciteJuzs,
-                  listenHizbs: tasks.listenHizbs,
                 })
               }
             />
@@ -144,10 +143,9 @@ export default function HomeTab({ tasks, dayTasks, currentDay }: Props) {
               icon={<Volume2 className="w-4 h-4" />}
               onSession={() =>
                 openSession({
-                  kind: "khatma",
+                  kind: "khatma_listen",
                   day: currentDay,
                   thumuns: [],
-                  reciteJuzs: tasks.reciteJuzs,
                   listenHizbs: tasks.listenHizbs,
                 })
               }

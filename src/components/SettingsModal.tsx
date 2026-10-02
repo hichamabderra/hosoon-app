@@ -375,22 +375,36 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
 
               {/* قارئ سماع الأثمان */}
-              <div className="flex items-center justify-between">
-                <label htmlFor="thumun-reciter-select" className="font-bold text-sm">
-                  قارئ الأثمان (الحفظ)
-                </label>
-                <select
-                  id="thumun-reciter-select"
-                  value={settings.thumunReciterId || "sayed"}
-                  onChange={(e) => updateSettings({ thumunReciterId: e.target.value })}
-                  className="bg-surface border border-border rounded-lg px-2 py-1.5 text-xs max-w-[55%]"
-                >
-                  {THUMUN_RECITERS.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} {"speedLabel" in r && r.speedLabel ? `(${r.speedLabel})` : ""}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="thumun-reciter-select" className="font-bold text-sm">
+                    قارئ الأثمان (الحفظ)
+                  </label>
+                  <select
+                    id="thumun-reciter-select"
+                    value={settings.thumunReciterId || "sayed"}
+                    onChange={(e) => updateSettings({ thumunReciterId: e.target.value })}
+                    className="bg-surface border border-border rounded-lg px-2 py-1.5 text-xs max-w-[55%]"
+                  >
+                    <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                      {THUMUN_RECITERS.filter((r) => r.pace === "normal").map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} (تلاوة معتادة)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="⚡ تلاوة مسرعة (حَدْر للمراجعة والتكرار)">
+                      {THUMUN_RECITERS.filter((r) => r.pace === "fast").map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} (مسرع — حَدْر)
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  التسجيلات المسرعة (الحَدْر) تُعين على التكرار السريع وتثبيت المحفوظ، بينما التلاوة المعتادة تناسب التحضير والضبط المتأني.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -7,6 +7,7 @@ import {
   getHizbAudioUrl,
   getThumunAudioUrl,
   thumunToHizbAndPos,
+  type ThumunReciter,
 } from "@/lib/quran-audio";
 import { useHifzStore } from "@/store/useHifzStore";
 import { formatClock, formatNum } from "@/lib/format";
@@ -260,6 +261,11 @@ export default function QuranAudioPlayer({
 
   const currentPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const currentReciter = reciterList.find((r) => r.id === currentReciterId);
+  const thumunReciter: ThumunReciter | undefined =
+    mode === "thumun" ? (THUMUN_RECITERS.find((r) => r.id === currentReciterId) ?? THUMUN_RECITERS[0]) : undefined;
+  const isFast = mode === "thumun" && thumunReciter?.pace === "fast";
+
   // Title fallback
   const computedTitle =
     title ||
@@ -273,7 +279,7 @@ export default function QuranAudioPlayer({
       ? `الحزب ${formatNum(thumunToHizbAndPos(targetId).hizb, arabic)} · الثمن ${formatNum(
           thumunToHizbAndPos(targetId).pos,
           arabic,
-        )}`
+        )} · ${currentReciter?.name ?? ""} (${isFast ? "مسرع بالحدر" : "تلاوة معتادة"})`
       : "رواية ورش عن نافع");
 
   if (compact) {
@@ -306,17 +312,48 @@ export default function QuranAudioPlayer({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {isFast && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0"
+                title="تسجيل مسرع أصلي بالحدر"
+              >
+                ⚡ مسرع
+              </span>
+            )}
             <select
               value={currentReciterId}
               onChange={(e) => handleReciterChange(e.target.value)}
               className="bg-surface text-foreground border border-border/70 rounded-lg px-2 py-1 text-[11px] font-medium outline-none cursor-pointer"
               aria-label="اختيار القارئ"
             >
-              {reciterList.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
+              {mode === "thumun" ? (
+                <>
+                  <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                    {reciterList
+                      .filter((r) => "pace" in r && r.pace === "normal")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} (تلاوة معتادة)
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="⚡ تلاوة مسرعة (حدر للمراجعة والتكرار)">
+                    {reciterList
+                      .filter((r) => "pace" in r && r.pace === "fast")
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} (مسرع — حَدْر)
+                        </option>
+                      ))}
+                  </optgroup>
+                </>
+              ) : (
+                reciterList.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -338,7 +375,26 @@ export default function QuranAudioPlayer({
             <Headphones className="w-5 h-5" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h4 className="font-bold text-sm text-foreground truncate">{computedTitle}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-sm text-foreground truncate">{computedTitle}</h4>
+              {mode === "thumun" && (
+                isFast ? (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0"
+                    title="تسجيل مسرع أصلي بالحدر مخصص للمراجعة والتكرار"
+                  >
+                    ⚡ مسرع (حَدْر)
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0"
+                    title="تلاوة تعليمية معتادة هادئة للتحضير والحفظ"
+                  >
+                    🌿 تلاوة معتادة
+                  </span>
+                )
+              )}
+            </div>
             <p className="text-[11px] text-muted-foreground truncate">{computedSubtitle}</p>
           </div>
         </div>
@@ -351,14 +407,44 @@ export default function QuranAudioPlayer({
             className="bg-background text-foreground border border-border/70 rounded-xl px-2.5 py-1.5 text-xs font-medium outline-none focus:border-primary transition-colors cursor-pointer"
             aria-label="اختيار القارئ"
           >
-            {reciterList.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} {"speedLabel" in r && r.speedLabel ? `(${r.speedLabel})` : ""}
-              </option>
-            ))}
+            {mode === "thumun" ? (
+              <>
+                <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                  {reciterList
+                    .filter((r) => "pace" in r && r.pace === "normal")
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} (تلاوة معتادة)
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="⚡ تلاوة مسرعة (حدر للمراجعة والتكرار)">
+                  {reciterList
+                    .filter((r) => "pace" in r && r.pace === "fast")
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} (مسرع — حَدْر)
+                      </option>
+                    ))}
+                </optgroup>
+              </>
+            ) : (
+              reciterList.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>
+
+      {isFast && thumunReciter && (
+        <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-200 flex flex-wrap items-center justify-between gap-1">
+          <span className="font-semibold">⚡ تلاوة مسرعة بالحَدْر (لتسريع التكرار والمراجعة)</span>
+          <span className="text-[10px] opacity-80">{thumunReciter.description}</span>
+        </div>
+      )}
 
       {errorMsg ? (
         <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center justify-between gap-2 my-2">
@@ -436,7 +522,11 @@ export default function QuranAudioPlayer({
             size="sm"
             onClick={cycleSpeed}
             className="h-8 px-2 text-xs font-mono font-bold text-muted-foreground hover:text-foreground rounded-lg"
-            title="تغيير سرعة القراءة"
+            title={
+              isFast
+                ? `سرعة التشغيل ${playbackRate}x (التسجيل مسرع أصلاً بالحدر)`
+                : `سرعة التشغيل ${playbackRate}x`
+            }
             aria-label={`سرعة القراءة ${playbackRate}x`}
           >
             <Gauge className="w-3.5 h-3.5 ml-1 inline text-primary" />

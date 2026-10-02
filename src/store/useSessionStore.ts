@@ -8,6 +8,8 @@ export type SessionKind =
   | "review_far"
   | "prep"
   | "khatma"
+  | "khatma_recite"
+  | "khatma_listen"
   | "maintain_recite";
 
 export interface SessionPayload {
@@ -26,6 +28,8 @@ export const SESSION_TASK: Record<SessionKind, TaskType | null> = {
   review_far: "review_far",
   prep: "prep_weekly",
   khatma: null,
+  khatma_recite: "khatma_recite",
+  khatma_listen: "khatma_listen",
   maintain_recite: "maintain_recite",
 };
 

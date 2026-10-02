@@ -29,6 +29,8 @@ const TITLES: Record<string, string> = {
   review_far: "جلسة مراجعة البعيد",
   prep: "جلسة التحضير",
   khatma: "جلسة الختمة",
+  khatma_recite: "جلسة الختمة — التلاوة",
+  khatma_listen: "جلسة الختمة — الاستماع",
   maintain_recite: "الورد التثبيتي",
 };
 
@@ -164,7 +166,7 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
             </div>
           ) : null}
 
-          {kind === "khatma" ? (
+          {kind === "khatma_recite" || kind === "maintain_recite" ? (
             <div className="space-y-4">
               <SpanSection
                 title={`تلاوة: ${(reciteJuzs ?? []).length > 1 ? "الأجزاء" : "الجزء"} ${(reciteJuzs ?? [])
@@ -173,22 +175,59 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
                 rows={reciteSpan}
                 arabic={arabic}
               />
-              <div className="space-y-3">
+            </div>
+          ) : kind === "khatma_listen" ? (
+            <div className="space-y-3">
+              <div className="bg-background/50 rounded-xl p-3.5 border border-border/50">
                 <p className="font-bold text-sm text-foreground">
                   سماع: {(listenHizbs ?? []).length > 1 ? "الأحزاب" : "الحزب"} {(listenHizbs ?? [])
                     .map((h) => formatNum(h, arabic))
                     .join("، ")}
                 </p>
-                {(listenHizbs ?? []).map((h) => (
-                  <QuranAudioPlayer
-                    key={h}
-                    mode="hizb"
-                    targetId={h}
-                    title={`سماع الحزب ${formatNum(h, arabic)}`}
-                    subtitle="ورد الاستماع لليوم"
-                  />
-                ))}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  ورد الاستماع اليومي لتثبيت الحفظ وضبط الأداء
+                </p>
               </div>
+              {(listenHizbs ?? []).map((h) => (
+                <QuranAudioPlayer
+                  key={h}
+                  mode="hizb"
+                  targetId={h}
+                  title={`سماع الحزب ${formatNum(h, arabic)}`}
+                  subtitle="ورد الاستماع لليوم"
+                  autoPlay={(listenHizbs ?? []).length === 1}
+                />
+              ))}
+            </div>
+          ) : kind === "khatma" ? (
+            <div className="space-y-4">
+              {reciteJuzs && reciteJuzs.length > 0 && (
+                <SpanSection
+                  title={`تلاوة: ${reciteJuzs.length > 1 ? "الأجزاء" : "الجزء"} ${reciteJuzs
+                    .map((j) => formatNum(j, arabic))
+                    .join("، ")}`}
+                  rows={reciteSpan}
+                  arabic={arabic}
+                />
+              )}
+              {listenHizbs && listenHizbs.length > 0 && (
+                <div className="space-y-3">
+                  <p className="font-bold text-sm text-foreground">
+                    سماع: {listenHizbs.length > 1 ? "الأحزاب" : "الحزب"} {listenHizbs
+                      .map((h) => formatNum(h, arabic))
+                      .join("، ")}
+                  </p>
+                  {listenHizbs.map((h) => (
+                    <QuranAudioPlayer
+                      key={h}
+                      mode="hizb"
+                      targetId={h}
+                      title={`سماع الحزب ${formatNum(h, arabic)}`}
+                      subtitle="ورد الاستماع لليوم"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -296,6 +335,58 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
             >
               {kind === "new_hifz" ? "تم إنجاز الحفظ" : "تم الورد"}
             </Button>
+          )}
+
+          {kind === "khatma_recite" && taskOf && (
+            <Button
+              size="lg"
+              className="w-full text-lg font-bold h-12 rounded-xl"
+              onClick={(e) => {
+                addEvent(XP_TABLE[taskOf] ?? 0, e.clientX, e.clientY);
+                completeTasks([taskOf]);
+              }}
+            >
+              تم إنجاز التلاوة
+            </Button>
+          )}
+
+          {kind === "khatma_listen" && taskOf && (
+            <Button
+              size="lg"
+              className="w-full text-lg font-bold h-12 rounded-xl"
+              onClick={(e) => {
+                addEvent(XP_TABLE[taskOf] ?? 0, e.clientX, e.clientY);
+                completeTasks([taskOf]);
+              }}
+            >
+              تم إنجاز الاستماع
+            </Button>
+          )}
+
+          {kind === "khatma" && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-xl font-bold"
+                onClick={(e) => {
+                  addEvent(XP_TABLE.khatma_recite ?? 0, e.clientX, e.clientY);
+                  completeTasks(["khatma_recite"]);
+                }}
+              >
+                تمت التلاوة
+              </Button>
+              <Button
+                size="lg"
+                className="h-12 rounded-xl font-bold"
+                onClick={(e) => {
+                  addEvent(XP_TABLE.khatma_listen ?? 0, e.clientX, e.clientY);
+                  completeTasks(["khatma_listen"]);
+                }}
+              >
+                تم الاستماع
+              </Button>
+            </div>
           )}
 
           {(kind === "review_near" || kind === "review_far") && (
