@@ -7,6 +7,7 @@ import { getFortressTasks } from "@/lib/fortress-calculator";
 import { thumunRangeLabel, thumunTitle } from "@/lib/quran-labels";
 import { isDayCompleted, useHifzStore } from "@/store/useHifzStore";
 import { useSessionStore } from "@/store/useSessionStore";
+import { useMushafStore } from "@/store/useMushafStore";
 import { useXpStore } from "@/store/useXpStore";
 import { Button } from "./ui/button";
 import { useState, useEffect } from "react";
@@ -38,6 +39,7 @@ export default function DayPreviewModal({ day, onClose }: Props) {
   const settings = useHifzStore((s) => s.settings);
   const addEvent = useXpStore((s) => s.addEvent);
   const openSession = useSessionStore((s) => s.open);
+  const openReader = useMushafStore((s) => s.openReader);
   const tasks = getFortressTasks(day, {
     edited: editedThumuns,
     weakIds: Object.entries(thumunRatings)
@@ -110,6 +112,17 @@ export default function DayPreviewModal({ day, onClose }: Props) {
                   {target.text}
                 </div>
                 <p className="text-xs text-muted-foreground mt-3 mb-3">{thumunRangeLabel(target, arabic)}</p>
+                <Button
+                  variant="outline"
+                  className="w-full mb-3 rounded-xl font-bold gap-2 text-xs sm:text-sm bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:bg-amber-500/20"
+                  onClick={() => {
+                    vibrateLight();
+                    openReader(target.id);
+                  }}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>قراءة الثمن من المصحف</span>
+                </Button>
                 <QuranAudioPlayer
                   mode="thumun"
                   targetId={target.id}

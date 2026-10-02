@@ -4,6 +4,9 @@ import { formatNum } from "@/lib/format";
 import { thumunShort, thumunTitle } from "@/lib/quran-labels";
 import type { Thumun } from "@/lib/quran-data";
 import { useHifzStore } from "@/store/useHifzStore";
+import { useMushafStore } from "@/store/useMushafStore";
+import { vibrateLight } from "@/lib/haptic";
+import { BookOpen } from "lucide-react";
 
 interface Props {
   thumun: Thumun;
@@ -12,6 +15,7 @@ interface Props {
   actionLabel?: string;
   showNote?: boolean;
   compact?: boolean;
+  showReadButton?: boolean;
 }
 
 export default function ThumunCard({
@@ -21,10 +25,12 @@ export default function ThumunCard({
   actionLabel,
   showNote = true,
   compact = false,
+  showReadButton = true,
 }: Props) {
   const arabic = useHifzStore((s) => s.settings.arabicNumerals);
   const note = useHifzStore((s) => s.notes[thumun.id]);
   const rating = useHifzStore((s) => s.thumunRatings[thumun.id]);
+  const openReader = useMushafStore((s) => s.openReader);
 
   const ratingChip =
     rating === "weak"
@@ -89,17 +95,37 @@ export default function ThumunCard({
         </div>
       </div>
 
-      {actionLabel && (
-        <button
-          type="button"
-          className="mt-4 w-full py-3 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick?.();
-          }}
-        >
-          {actionLabel}
-        </button>
+      {(showReadButton || actionLabel) && (
+        <div className="mt-4 flex items-center gap-2">
+          {showReadButton && (
+            <button
+              type="button"
+              className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-xs sm:text-sm hover:bg-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border border-amber-500/25"
+              onClick={(e) => {
+                e.stopPropagation();
+                vibrateLight();
+                openReader(thumun.id);
+              }}
+              aria-label={`قراءة ${thumunTitle(thumun, arabic)}`}
+            >
+              <BookOpen className="w-4 h-4 shrink-0" />
+              <span>قراءة الثمن</span>
+            </button>
+          )}
+
+          {actionLabel && (
+            <button
+              type="button"
+              className="flex-1 py-2.5 px-3 rounded-xl bg-primary/10 text-primary font-bold text-xs sm:text-sm hover:bg-primary/20 active:scale-[0.98] transition-all border border-primary/25"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick?.();
+              }}
+            >
+              {actionLabel}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

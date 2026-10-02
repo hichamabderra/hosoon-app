@@ -75,13 +75,52 @@ export default function QuranAudioPlayer({
       ? getHizbAudioUrl(currentReciterId, targetId)
       : getThumunAudioUrl(currentReciterId, targetId);
 
+  const shouldAutoPlayOnUrlChangeRef = useRef(false);
+  const isSwitchingReciterRef = useRef(false);
+
   // Reciter change
   const handleReciterChange = (newReciterId: string) => {
     vibrateLight();
+    const audio = audioRef.current;
+    const wasPlaying = isPlaying || (audio && !audio.paused && audio.currentTime > 0);
+
     if (mode === "hizb") {
       updateSettings({ hizbReciterId: newReciterId });
     } else {
       updateSettings({ thumunReciterId: newReciterId });
+    }
+
+    const nextUrl =
+      mode === "hizb"
+        ? getHizbAudioUrl(newReciterId, targetId)
+        : getThumunAudioUrl(newReciterId, targetId);
+
+    if (audio) {
+      setErrorMsg(null);
+      if (wasPlaying) {
+        isSwitchingReciterRef.current = true;
+        shouldAutoPlayOnUrlChangeRef.current = false;
+        setIsLoading(true);
+        audio.src = nextUrl;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              isSwitchingReciterRef.current = false;
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch((err) => {
+              console.error("Audio playback error on reciter change:", err);
+              isSwitchingReciterRef.current = false;
+              setIsPlaying(false);
+              setIsLoading(false);
+            });
+        }
+      } else {
+        audio.src = nextUrl;
+        audio.load();
+      }
     }
   };
 
@@ -137,17 +176,44 @@ export default function QuranAudioPlayer({
     audio.currentTime = ratio * (audio.duration || 0);
   };
 
-  // When source URL changes, reload audio element cleanly
+  // When source URL changes, reload audio element cleanly and auto-resume if it was playing
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    setErrorMsg(null);
-    audio.src = audioUrl;
-    audio.load();
+    const sameUrl =
+      audio.src === audioUrl ||
+      decodeURI(audio.src) === decodeURI(audioUrl) ||
+      (audioUrl && audio.src.endsWith(audioUrl));
 
-    if (autoPlay) {
-      audio.play().catch(() => {});
+    if (sameUrl && (isSwitchingReciterRef.current || isPlaying || isLoading)) {
+      return;
+    }
+
+    const willPlay = autoPlay || shouldAutoPlayOnUrlChangeRef.current;
+    shouldAutoPlayOnUrlChangeRef.current = false;
+
+    setErrorMsg(null);
+    if (!sameUrl) {
+      audio.src = audioUrl;
+      audio.load();
+    }
+
+    if (willPlay) {
+      setIsLoading(true);
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            setIsLoading(false);
+          })
+          .catch((err) => {
+            console.error("Audio playback error on url change:", err);
+            setIsPlaying(false);
+            setIsLoading(false);
+          });
+      }
     }
   }, [audioUrl, autoPlay]);
 
@@ -177,6 +243,7 @@ export default function QuranAudioPlayer({
     };
 
     const onPause = () => {
+      if (isSwitchingReciterRef.current) return;
       setIsPlaying(false);
     };
 
@@ -185,6 +252,8 @@ export default function QuranAudioPlayer({
     };
 
     const onPlaying = () => {
+      isSwitchingReciterRef.current = false;
+      setIsPlaying(true);
       setIsLoading(false);
     };
 
@@ -195,6 +264,7 @@ export default function QuranAudioPlayer({
     };
 
     const onError = () => {
+      isSwitchingReciterRef.current = false;
       setIsLoading(false);
       setIsPlaying(false);
       setErrorMsg("تعذر تحميل المقطع الصوتي — يرجى التحقق من الاتصال");
@@ -279,7 +349,7 @@ export default function QuranAudioPlayer({
       ? `الحزب ${formatNum(thumunToHizbAndPos(targetId).hizb, arabic)} · الثمن ${formatNum(
           thumunToHizbAndPos(targetId).pos,
           arabic,
-        )} · ${currentReciter?.name ?? ""} (${isFast ? "مسرع بالحدر" : "تلاوة معتادة"})`
+        )} · ${currentReciter?.name ?? ""} (${isFast ? "مسرع" : "تلاوة"})`
       : "رواية ورش عن نافع");
 
   if (compact) {
@@ -305,44 +375,49 @@ export default function QuranAudioPlayer({
             </Button>
             <div className="min-w-0">
               <p className="text-xs font-bold text-foreground truncate">{computedTitle}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">
-                {formatClock(currentTime)} / {formatClock(duration)}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                {mode === "thumun" && (
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                      isFast
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25"
+                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                    }`}
+                  >
+                    {isFast ? "⚡ مسرع" : "🌿 تلاوة"}
+                  </span>
+                )}
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {formatClock(currentTime)} / {formatClock(duration)}
+                </p>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {isFast && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0"
-                title="تسجيل مسرع أصلي بالحدر"
-              >
-                ⚡ مسرع
-              </span>
-            )}
             <select
               value={currentReciterId}
               onChange={(e) => handleReciterChange(e.target.value)}
-              className="bg-surface text-foreground border border-border/70 rounded-lg px-2 py-1 text-[11px] font-medium outline-none cursor-pointer"
+              className="bg-surface text-foreground border border-border/70 rounded-lg px-2 py-1 text-[11px] font-medium outline-none cursor-pointer max-w-[130px] sm:max-w-none"
               aria-label="اختيار القارئ"
             >
               {mode === "thumun" ? (
                 <>
-                  <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                  <optgroup label="⏱️ تلاوة">
                     {reciterList
                       .filter((r) => "pace" in r && r.pace === "normal")
                       .map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} (تلاوة معتادة)
+                          {r.name} (تلاوة)
                         </option>
                       ))}
                   </optgroup>
-                  <optgroup label="⚡ تلاوة مسرعة (حدر للمراجعة والتكرار)">
+                  <optgroup label="⚡ مسرع">
                     {reciterList
                       .filter((r) => "pace" in r && r.pace === "fast")
                       .map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} (مسرع — حَدْر)
+                          {r.name} (مسرع)
                         </option>
                       ))}
                   </optgroup>
@@ -375,27 +450,27 @@ export default function QuranAudioPlayer({
             <Headphones className="w-5 h-5" aria-hidden />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-sm text-foreground truncate">{computedTitle}</h4>
+            <h4 className="font-bold text-sm text-foreground truncate">{computedTitle}</h4>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               {mode === "thumun" && (
                 isFast ? (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0"
                     title="تسجيل مسرع أصلي بالحدر مخصص للمراجعة والتكرار"
                   >
-                    ⚡ مسرع (حَدْر)
+                    ⚡ مسرع
                   </span>
                 ) : (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0"
                     title="تلاوة تعليمية معتادة هادئة للتحضير والحفظ"
                   >
-                    🌿 تلاوة معتادة
+                    🌿 تلاوة
                   </span>
                 )
               )}
+              <p className="text-[11px] text-muted-foreground truncate">{computedSubtitle}</p>
             </div>
-            <p className="text-[11px] text-muted-foreground truncate">{computedSubtitle}</p>
           </div>
         </div>
 
@@ -409,21 +484,21 @@ export default function QuranAudioPlayer({
           >
             {mode === "thumun" ? (
               <>
-                <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                <optgroup label="⏱️ تلاوة">
                   {reciterList
                     .filter((r) => "pace" in r && r.pace === "normal")
                     .map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.name} (تلاوة معتادة)
+                        {r.name} (تلاوة)
                       </option>
                     ))}
                 </optgroup>
-                <optgroup label="⚡ تلاوة مسرعة (حدر للمراجعة والتكرار)">
+                <optgroup label="⚡ مسرع">
                   {reciterList
                     .filter((r) => "pace" in r && r.pace === "fast")
                     .map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.name} (مسرع — حَدْر)
+                        {r.name} (مسرع)
                       </option>
                     ))}
                 </optgroup>
@@ -441,7 +516,7 @@ export default function QuranAudioPlayer({
 
       {isFast && thumunReciter && (
         <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-200 flex flex-wrap items-center justify-between gap-1">
-          <span className="font-semibold">⚡ تلاوة مسرعة بالحَدْر (لتسريع التكرار والمراجعة)</span>
+          <span className="font-semibold">⚡ تلاوة مسرعة (لتسريع التكرار والمراجعة)</span>
           <span className="text-[10px] opacity-80">{thumunReciter.description}</span>
         </div>
       )}
@@ -524,7 +599,7 @@ export default function QuranAudioPlayer({
             className="h-8 px-2 text-xs font-mono font-bold text-muted-foreground hover:text-foreground rounded-lg"
             title={
               isFast
-                ? `سرعة التشغيل ${playbackRate}x (التسجيل مسرع أصلاً بالحدر)`
+                ? `سرعة التشغيل ${playbackRate}x (التسجيل مسرع أصلاً)`
                 : `سرعة التشغيل ${playbackRate}x`
             }
             aria-label={`سرعة القراءة ${playbackRate}x`}

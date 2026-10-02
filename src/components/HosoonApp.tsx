@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import HomeTab from "@/components/tabs/HomeTab";
 import PrepTab from "@/components/tabs/PrepTab";
 import ReviewTab from "@/components/tabs/ReviewTab";
+import ThumunReaderView from "@/components/mushaf/ThumunReaderView";
 import { Button } from "@/components/ui/button";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import { useBrowserFlag, useMounted } from "@/hooks/useMounted";
@@ -21,10 +22,12 @@ import { vibrateLight } from "@/lib/haptic";
 import { scheduleDailyReminder } from "@/lib/reminders";
 import { getCurrentUser, isSupabaseConfigured, onAuthChange } from "@/lib/supabase";
 import { isDayCompleted, useHifzStore } from "@/store/useHifzStore";
+import { useMushafStore } from "@/store/useMushafStore";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart2,
   Bell,
+  BookOpen,
   BookOpenCheck,
   CalendarDays,
   Flame,
@@ -49,6 +52,7 @@ export default function HosoonApp() {
   const maintain = useHifzStore((s) => s.maintain) ?? { active: false, day: 1 };
   const settings = useHifzStore((s) => s.settings);
   const reminderTime = settings.reminderTime;
+  const openReader = useMushafStore((s) => s.openReader);
 
   const mounted = useMounted();
   const [signedIn, setSignedIn] = useState(false);
@@ -243,6 +247,19 @@ export default function HosoonApp() {
               </span>
             )}
             <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 font-bold text-xs h-9 px-3 rounded-full border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition-all"
+              aria-label="فتح المصحف الشريف"
+              onClick={() => {
+                vibrateLight();
+                openReader(currentDay);
+              }}
+            >
+              <BookOpen className="w-3.5 h-3.5" aria-hidden />
+              <span>المصحف</span>
+            </Button>
+            <Button
               variant="ghost"
               size="icon"
               className="text-muted-foreground"
@@ -383,6 +400,7 @@ export default function HosoonApp() {
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       <SessionOverlay />
+      <ThumunReaderView />
       <KhatmaCelebration />
       <FloatingXpOverlay />
     </main>

@@ -14,6 +14,7 @@ import QuranAudioPlayer from "./audio/QuranAudioPlayer";
 import { Button } from "./ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  BookOpen,
   Minus,
   Pause,
   Play,
@@ -21,6 +22,7 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
+import { useMushafStore } from "@/store/useMushafStore";
 import { useMemo, useState } from "react";
 
 const TITLES: Record<string, string> = {
@@ -63,6 +65,7 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
   const settings = useHifzStore((s) => s.settings);
   const notes = useHifzStore((s) => s.notes);
   const addEvent = useXpStore((s) => s.addEvent);
+  const openReader = useMushafStore((s) => s.openReader);
   const timer = useSessionTimer(25);
   const [confirmClose, setConfirmClose] = useState(false);
   const arabic = settings.arabicNumerals;
@@ -233,9 +236,23 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
             <div className="space-y-3">
               {thumuns.map((t) => (
                 <div key={t.id} className="bg-background/50 rounded-2xl p-4 border border-border/50 space-y-3">
-                  <div>
-                    <p className="font-bold text-base text-foreground">{thumunTitle(t, arabic)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{thumunShort(t, arabic)}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-base text-foreground">{thumunTitle(t, arabic)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{thumunShort(t, arabic)}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        vibrateLight();
+                        openReader(t.id);
+                      }}
+                      className="rounded-xl font-bold gap-1.5 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:bg-amber-500/20 shrink-0"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      <span>قراءة من المصحف</span>
+                    </Button>
                   </div>
                   <p className="font-quran text-foreground/90 text-lg leading-loose">
                     {t.partialStart ? "…" : ""}

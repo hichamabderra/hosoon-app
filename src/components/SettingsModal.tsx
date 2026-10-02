@@ -386,17 +386,17 @@ export default function SettingsModal({ onClose }: Props) {
                     onChange={(e) => updateSettings({ thumunReciterId: e.target.value })}
                     className="bg-surface border border-border rounded-lg px-2 py-1.5 text-xs max-w-[55%]"
                   >
-                    <optgroup label="⏱️ تلاوة معتادة (هادئة للتحضير والحفظ)">
+                    <optgroup label="⏱️ تلاوة">
                       {THUMUN_RECITERS.filter((r) => r.pace === "normal").map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} (تلاوة معتادة)
+                          {r.name} (تلاوة)
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="⚡ تلاوة مسرعة (حَدْر للمراجعة والتكرار)">
+                    <optgroup label="⚡ مسرع">
                       {THUMUN_RECITERS.filter((r) => r.pace === "fast").map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.name} (مسرع — حَدْر)
+                          {r.name} (مسرع)
                         </option>
                       ))}
                     </optgroup>
