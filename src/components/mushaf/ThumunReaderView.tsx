@@ -7,10 +7,12 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  Expand,
   Headphones,
   Maximize2,
   Minimize2,
   Moon,
+  Shrink,
   Sun,
   Volume2,
   X,
@@ -33,19 +35,38 @@ export default function ThumunReaderView() {
   const isOpen = useMushafStore((s) => s.isOpen);
   const closeReader = useMushafStore((s) => s.closeReader);
 
-  // Close on Escape key & lock background body scroll
+  // Close on Escape key, lock background body scroll, and handle browser/mobile Back button
   useEffect(() => {
     if (!isOpen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    // Push history state so Android/mobile back button closes reader instead of exiting app
+    window.history.pushState({ modal: "mushaf-reader" }, "");
+
+    let poppedByBrowser = false;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeReader();
+      if (e.key === "Escape") {
+        closeReader();
+      }
     };
+
+    const handlePopState = () => {
+      poppedByBrowser = true;
+      closeReader();
+    };
+
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
+
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+      if (!poppedByBrowser && typeof window !== "undefined" && window.history.state?.modal === "mushaf-reader") {
+        window.history.back();
+      }
     };
   }, [isOpen, closeReader]);
 
@@ -77,11 +98,38 @@ function ThumunReaderContent() {
 
   const [showControls, setShowControls] = useState(true);
   const [loadedPage, setLoadedPage] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const imageLoaded = loadedPage === currentPage;
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const pageInfo = getMushafPageInfo(currentPage);
   const thumun = pageInfo.thumun;
+
+  // Listen for fullscreen change
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    vibrateLight();
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch {
+      // Ignored
+    }
+  };
 
   // Touch swipe support (RTL: swipe left = next page, swipe right = prev page)
   const swipeHandlers = useSwipeable({
@@ -235,6 +283,22 @@ function ThumunReaderContent() {
                 )}
               </Button>
 
+              {/* Fullscreen Browser Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="w-9 h-9 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+                title={isFullscreen ? "إلغاء ملء الشاشة" : "ملء الشاشة"}
+                aria-label={isFullscreen ? "إلغاء ملء الشاشة" : "ملء الشاشة"}
+              >
+                {isFullscreen ? (
+                  <Shrink className="w-4 h-4" />
+                ) : (
+                  <Expand className="w-4 h-4" />
+                )}
+              </Button>
+
               {/* Zoom Toggle */}
               <Button
                 variant="ghost"
@@ -244,8 +308,8 @@ function ThumunReaderContent() {
                   toggleZoom();
                 }}
                 className="w-9 h-9 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
-                title={isZoomed ? "تصغير ملائم للشاشة" : "تكبير مريح للعين"}
-                aria-label={isZoomed ? "تصغير ملائم للشاشة" : "تكبير مريح للعين"}
+                title={isZoomed ? "ملاءمة كامل الصفحة" : "تكبير النص مع التمرير"}
+                aria-label={isZoomed ? "ملاءمة كامل الصفحة" : "تكبير النص مع التمرير"}
               >
                 {isZoomed ? (
                   <Minimize2 className="w-4 h-4" />
@@ -282,7 +346,11 @@ function ThumunReaderContent() {
         {...swipeHandlers}
         ref={containerRef}
         onClick={handlePageTap}
-        className="flex-1 w-full min-h-0 flex items-center justify-center relative overflow-hidden p-1.5 sm:p-3 touch-pan-y"
+        className={
+          isZoomed
+            ? "flex-1 w-full min-h-0 overflow-y-auto overscroll-contain flex flex-col items-center p-1 sm:p-2 touch-pan-y"
+            : "flex-1 w-full min-h-0 flex items-center justify-center relative overflow-hidden p-0 sm:p-1 touch-pan-y"
+        }
       >
         {/* Subtle Next / Prev Clickable Side Areas on Desktop/Tablets */}
         <button
@@ -315,9 +383,11 @@ function ThumunReaderContent() {
 
         {/* Page Image */}
         <div
-          className={`relative max-w-full h-full flex items-center justify-center transition-transform duration-200 ${
-            isZoomed ? "scale-[1.25] sm:scale-[1.35] my-auto" : ""
-          }`}
+          className={
+            isZoomed
+              ? "w-full max-w-3xl min-h-full flex flex-col items-center justify-center py-2"
+              : "relative w-full h-full flex items-center justify-center"
+          }
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -325,9 +395,15 @@ function ThumunReaderContent() {
             src={pageInfo.imageUrl}
             alt={pageInfo.title}
             onLoad={() => setLoadedPage(currentPage)}
-            className={`max-w-full max-h-full object-contain rounded-lg shadow-sm transition-opacity duration-200 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            } ${themeStyles.imgFilter}`}
+            className={
+              isZoomed
+                ? `w-full h-auto max-w-full object-contain rounded-sm shadow-sm transition-opacity duration-200 ${
+                    imageLoaded ? "opacity-100" : "opacity-0"
+                  } ${themeStyles.imgFilter}`
+                : `max-w-full max-h-full w-auto h-auto object-contain rounded-sm shadow-sm transition-opacity duration-200 ${
+                    imageLoaded ? "opacity-100" : "opacity-0"
+                  } ${themeStyles.imgFilter}`
+            }
             style={{
               filter:
                 theme === "dark"
@@ -344,6 +420,68 @@ function ThumunReaderContent() {
         </div>
       </main>
 
+      {/* ─── Persistent Audio Player Layer (Plays continuously even in full display) ─── */}
+      {showAudio && (
+        <>
+          {/* Main Audio Card (docked above bottom navigation when controls are visible) */}
+          <div
+            className={`fixed bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 w-[calc(100%-1.5rem)] max-w-md pointer-events-auto transition-all duration-200 ${
+              showControls
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 pointer-events-none translate-y-4"
+            }`}
+          >
+            <div className={`p-3 rounded-2xl border backdrop-blur-md shadow-2xl ${themeStyles.hud} audio-player-zone`}>
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/40">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-primary" />
+                  <span className="font-bold text-xs truncate max-w-[240px]">
+                    سماع {thumun ? thumunTitle(thumun, arabic) : `الثمن ${formatNum(thumunId, arabic)}`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleAudio}
+                  className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+                  aria-label="إغلاق مشغل الصوت"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <QuranAudioPlayer
+                mode="thumun"
+                targetId={thumunId}
+                compact={true}
+                autoPlay={false}
+              />
+            </div>
+          </div>
+
+          {/* Floating Mini Pill when controls are hidden during fullscreen reading */}
+          {!showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowControls(true);
+              }}
+              className="fixed bottom-3 right-3 z-30 cursor-pointer pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 dark:bg-zinc-800/90 text-white backdrop-blur-md shadow-xl border border-white/20 text-xs hover:scale-105 active:scale-95 transition-transform"
+              title="اضغط لإظهار أدوات التحكم بالصوت والقراءة"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-medium max-w-[140px] truncate">
+                {thumun ? thumunTitle(thumun, arabic) : `الثمن ${formatNum(thumunId, arabic)}`}
+              </span>
+              <span className="text-[10px] opacity-75 bg-white/15 px-1.5 py-0.5 rounded-full font-bold">
+                تحكم
+              </span>
+            </motion.div>
+          )}
+        </>
+      )}
+
       {/* ─── Bottom Floating Controls HUD ─── */}
       <AnimatePresence>
         {showControls && (
@@ -354,39 +492,6 @@ function ThumunReaderContent() {
             transition={{ duration: 0.18 }}
             className="shrink-0 z-20 pb-3 pt-1 px-3 flex flex-col items-center gap-2"
           >
-            {/* Inline Audio Player (Expandable) */}
-            {showAudio && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className={`pointer-events-auto w-full max-w-md p-3 rounded-2xl border backdrop-blur-md shadow-xl ${themeStyles.hud} audio-player-zone`}
-              >
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/40">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="w-4 h-4 text-primary" />
-                    <span className="font-bold text-xs">
-                      سماع {thumun ? thumunTitle(thumun, arabic) : `الثمن ${formatNum(thumunId, arabic)}`}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={toggleAudio}
-                    className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
-                    aria-label="إغلاق مشغل الصوت"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <QuranAudioPlayer
-                  mode="thumun"
-                  targetId={thumunId}
-                  compact={true}
-                  autoPlay={false}
-                />
-              </motion.div>
-            )}
-
             {/* Navigation Floating Pill Bar */}
             <div
               className={`pointer-events-auto flex items-center justify-between gap-1.5 sm:gap-3 px-3 sm:px-4 py-2 rounded-full border backdrop-blur-md shadow-lg ${themeStyles.hud}`}

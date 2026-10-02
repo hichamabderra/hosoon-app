@@ -3,6 +3,7 @@
 import { TOTAL_HIZBS } from "@/lib/quran-data";
 import { formatNum } from "@/lib/format";
 import { hizbThumunRange } from "@/lib/fortress-calculator";
+import { hizbTitle } from "@/lib/quran-labels";
 import { useHifzStore } from "@/store/useHifzStore";
 import { CheckCircle2, Lock, Star } from "lucide-react";
 
@@ -37,7 +38,7 @@ export default function JourneyRoadmap({ totalCompleted }: Props) {
             return (
               <div
                 key={i}
-                title={`الحزب ${i + 1} — الأثمان ${from} إلى ${to}`}
+                title={`${hizbTitle(i + 1, arabic)} (الأثمان ${formatNum(from, arabic)} إلى ${formatNum(to, arabic)})`}
                 className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all ${
                   isCompleted
                     ? "bg-f-gold/15 border-f-gold/40 text-f-gold shadow-sm"

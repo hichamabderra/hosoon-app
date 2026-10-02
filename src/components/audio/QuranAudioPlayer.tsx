@@ -12,6 +12,7 @@ import {
 import { useHifzStore } from "@/store/useHifzStore";
 import { formatClock, formatNum } from "@/lib/format";
 import { vibrateLight } from "@/lib/haptic";
+import { getThumunIncipit, getHizbIncipit } from "@/lib/quran-labels";
 import {
   Headphones,
   Loader2,
@@ -336,12 +337,15 @@ export default function QuranAudioPlayer({
     mode === "thumun" ? (THUMUN_RECITERS.find((r) => r.id === currentReciterId) ?? THUMUN_RECITERS[0]) : undefined;
   const isFast = mode === "thumun" && thumunReciter?.pace === "fast";
 
-  // Title fallback
+  const thumunIncipit = mode === "thumun" ? getThumunIncipit(targetId) : "";
+  const hizbIncipit = mode === "hizb" ? getHizbIncipit(targetId) : "";
+
+  // Title fallback with rich incipit
   const computedTitle =
     title ||
     (mode === "hizb"
-      ? `سماع الحزب ${formatNum(targetId, arabic)}`
-      : `سماع الثمن ${formatNum(targetId, arabic)}`);
+      ? `الحزب ${formatNum(targetId, arabic)}${hizbIncipit ? ` — ${hizbIncipit}` : ""}`
+      : `الثمن ${formatNum(targetId, arabic)}${thumunIncipit ? ` — ${thumunIncipit}` : ""}`);
 
   const computedSubtitle =
     subtitle ||
@@ -354,10 +358,23 @@ export default function QuranAudioPlayer({
 
   if (compact) {
     return (
-      <div className={`bg-background/70 border border-border/70 rounded-xl p-2.5 ${className}`} dir="rtl">
+      <div className={`bg-background/80 border border-border/80 rounded-xl p-3 shadow-xs ${className}`} dir="rtl">
         <audio ref={audioRef} preload="none" />
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+
+        {/* Row 1: Title with Incipit */}
+        <div className="mb-2">
+          <p className="text-xs sm:text-sm font-bold text-foreground leading-snug break-words">
+            {computedTitle}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+            {computedSubtitle}
+          </p>
+        </div>
+
+        {/* Column layout for controls to completely avoid any overlap */}
+        <div className="flex flex-col gap-2 pt-2 border-t border-border/40">
+          {/* Play button + progress bar + time */}
+          <div className="flex items-center gap-2.5 w-full">
             <Button
               size="icon"
               onClick={togglePlay}
@@ -373,32 +390,41 @@ export default function QuranAudioPlayer({
                 <Play className="w-4 h-4 ml-0.5" />
               )}
             </Button>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">{computedTitle}</p>
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                {mode === "thumun" && (
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
-                      isFast
-                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25"
-                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
-                    }`}
-                  >
-                    {isFast ? "⚡ مسرع" : "🌿 تلاوة"}
-                  </span>
-                )}
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  {formatClock(currentTime)} / {formatClock(duration)}
-                </p>
-              </div>
+
+            <div
+              ref={progressBarRef}
+              onClick={handleSeek}
+              className="flex-1 h-2 bg-muted/70 hover:bg-muted rounded-full overflow-hidden cursor-pointer relative"
+              title="تقديم / تأخير"
+            >
+              <div
+                className="h-full bg-primary/80 transition-all duration-100 rounded-full"
+                style={{ width: `${currentPercent}%` }}
+              />
             </div>
+
+            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+              {formatClock(currentTime)} / {formatClock(duration)}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Reciter selector and pace badge row (full width, zero collision) */}
+          <div className="flex items-center gap-2 w-full">
+            {mode === "thumun" && (
+              <span
+                className={`text-[10px] font-bold px-2 py-1 rounded-md border shrink-0 ${
+                  isFast
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25"
+                    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                }`}
+              >
+                {isFast ? "⚡ مسرع" : "🌿 تلاوة"}
+              </span>
+            )}
             <select
               value={currentReciterId}
               onChange={(e) => handleReciterChange(e.target.value)}
-              className="bg-surface text-foreground border border-border/70 rounded-lg px-2 py-1 text-[11px] font-medium outline-none cursor-pointer max-w-[130px] sm:max-w-none"
+              className="flex-1 min-w-0 bg-surface text-foreground border border-border/70 rounded-lg px-2.5 py-1 text-xs font-medium outline-none cursor-pointer truncate"
               aria-label="اختيار القارئ"
             >
               {mode === "thumun" ? (

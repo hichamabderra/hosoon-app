@@ -3,7 +3,7 @@
 import { MOTIVATIONAL_QUOTES, type TaskType, XP_TABLE } from "@/lib/constants";
 import { formatNum } from "@/lib/format";
 import { vibrateLight, vibrateSuccess } from "@/lib/haptic";
-import { thumunShort, thumunTitle } from "@/lib/quran-labels";
+import { thumunShort, thumunTitle, hizbTitle } from "@/lib/quran-labels";
 import { formatHijriDate } from "@/lib/hijri";
 import type { FortressTasks } from "@/lib/fortress-calculator";
 import type { DailyTasks } from "@/store/useHifzStore";
@@ -134,8 +134,8 @@ export default function HomeTab({ tasks, dayTasks, currentDay }: Props) {
             />
             <TaskRow
               label={`سماع ${tasks.listenHizbs.length > 1 ? "الأحزاب" : "الحزب"} ${tasks.listenHizbs
-                .map((h) => formatNum(h, arabic))
-                .join("، ")}`}
+                .map((h) => hizbTitle(h, arabic))
+                .join(" · ")}`}
               sub={spanLabel(tasks.listenSpan, arabic)}
               checked={!!dayTasks.khatma_listen}
               task="khatma_listen"

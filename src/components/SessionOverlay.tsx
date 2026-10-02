@@ -5,7 +5,7 @@ import { XP_TABLE, type TaskType } from "@/lib/constants";
 import { formatClock, formatNum } from "@/lib/format";
 import { juzThumunRange } from "@/lib/fortress-calculator";
 import { getThumun } from "@/lib/quran-data";
-import { surahSpan, thumunShort, thumunTitle, type SurahSpan } from "@/lib/quran-labels";
+import { surahSpan, thumunShort, thumunTitle, hizbTitle, type SurahSpan } from "@/lib/quran-labels";
 import { vibrateLight, vibrateSuccess } from "@/lib/haptic";
 import { useSessionStore, SESSION_TASK, type SessionPayload } from "@/store/useSessionStore";
 import { useHifzStore, type ThumunRating } from "@/store/useHifzStore";
@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { useMushafStore } from "@/store/useMushafStore";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 const TITLES: Record<string, string> = {
   new_hifz: "جلسة الحفظ",
@@ -44,6 +44,42 @@ function spanOfRange(a: number, b: number): SurahSpan[] {
 
 export default function SessionOverlay() {
   const payload = useSessionStore((s) => s.payload);
+  const close = useSessionStore((s) => s.close);
+
+  // Close on Escape key, lock body scroll, and handle browser/mobile Back button cleanly
+  useEffect(() => {
+    if (!payload) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    window.history.pushState({ modal: "session-overlay" }, "");
+
+    let poppedByBrowser = false;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        close();
+      }
+    };
+
+    const handlePopState = () => {
+      poppedByBrowser = true;
+      close();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+      if (!poppedByBrowser && typeof window !== "undefined" && window.history.state?.modal === "session-overlay") {
+        window.history.back();
+      }
+    };
+  }, [payload, close]);
+
   return (
     <AnimatePresence>
       {payload && (
@@ -184,8 +220,8 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
               <div className="bg-background/50 rounded-xl p-3.5 border border-border/50">
                 <p className="font-bold text-sm text-foreground">
                   سماع: {(listenHizbs ?? []).length > 1 ? "الأحزاب" : "الحزب"} {(listenHizbs ?? [])
-                    .map((h) => formatNum(h, arabic))
-                    .join("، ")}
+                    .map((h) => hizbTitle(h, arabic))
+                    .join(" · ")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   ورد الاستماع اليومي لتثبيت الحفظ وضبط الأداء
@@ -196,7 +232,7 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
                   key={h}
                   mode="hizb"
                   targetId={h}
-                  title={`سماع الحزب ${formatNum(h, arabic)}`}
+                  title={`سماع ${hizbTitle(h, arabic)}`}
                   subtitle="ورد الاستماع لليوم"
                   autoPlay={(listenHizbs ?? []).length === 1}
                 />
@@ -217,15 +253,15 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
                 <div className="space-y-3">
                   <p className="font-bold text-sm text-foreground">
                     سماع: {listenHizbs.length > 1 ? "الأحزاب" : "الحزب"} {listenHizbs
-                      .map((h) => formatNum(h, arabic))
-                      .join("، ")}
+                      .map((h) => hizbTitle(h, arabic))
+                      .join(" · ")}
                   </p>
                   {listenHizbs.map((h) => (
                     <QuranAudioPlayer
                       key={h}
                       mode="hizb"
                       targetId={h}
-                      title={`سماع الحزب ${formatNum(h, arabic)}`}
+                      title={`سماع ${hizbTitle(h, arabic)}`}
                       subtitle="ورد الاستماع لليوم"
                     />
                   ))}
@@ -236,7 +272,7 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
             <div className="space-y-3">
               {thumuns.map((t) => (
                 <div key={t.id} className="bg-background/50 rounded-2xl p-4 border border-border/50 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div>
                       <p className="font-bold text-base text-foreground">{thumunTitle(t, arabic)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{thumunShort(t, arabic)}</p>
@@ -248,7 +284,7 @@ function SessionInner({ payload }: { payload: SessionPayload }) {
                         vibrateLight();
                         openReader(t.id);
                       }}
-                      className="rounded-xl font-bold gap-1.5 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:bg-amber-500/20 shrink-0"
+                      className="self-start sm:self-auto rounded-xl font-bold gap-1.5 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:bg-amber-500/20 shrink-0"
                     >
                       <BookOpen className="w-4 h-4" />
                       <span>قراءة من المصحف</span>

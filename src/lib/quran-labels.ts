@@ -1,5 +1,20 @@
 import { formatNum } from "./format";
 import { getSurah, type Thumun } from "./quran-data";
+import quranIncipitsData from "./quran-incipits.json";
+
+/** Returns the opening verse words (incipit) for any thumun (1..480) */
+export function getThumunIncipit(thumunId: number): string {
+  const safeId = Math.max(1, Math.min(480, thumunId));
+  const item = quranIncipitsData.thumuns[safeId - 1];
+  return item?.incipit || "";
+}
+
+/** Returns the opening verse words (incipit) for any hizb (1..60) */
+export function getHizbIncipit(hizb: number): string {
+  const safeHizb = Math.max(1, Math.min(60, hizb));
+  const item = quranIncipitsData.hizbs[safeHizb - 1];
+  return item?.incipit || "";
+}
 
 /** "سورة البقرة" */
 export function surahName(sura: number): string {
@@ -36,9 +51,16 @@ export function thumunShort(t: Thumun, arabic = false): string {
   return `${t.partialStart ? "…" : ""}${a}${b}`;
 }
 
-/** "الثمن 5 — خمسة أثمان (حزب 1)" */
+/** "الثمن 5 — وَلَا تَلْبِسُواْ اُ۬لْحَقَّ بِالْبَٰطِلِ" */
 export function thumunTitle(t: Thumun, arabic = false): string {
-  return `الثمن ${formatNum(t.id, arabic)} — ${t.name}`;
+  const incipit = getThumunIncipit(t.id);
+  return incipit ? `الثمن ${formatNum(t.id, arabic)} — ${incipit}` : `الثمن ${formatNum(t.id, arabic)} — ${t.name}`;
+}
+
+/** "الحزب 3 — سَيَقُولُ اُ۬لسُّفَهَآءُ مِنَ اَ۬لنَّاسِ" */
+export function hizbTitle(hizb: number, arabic = false): string {
+  const incipit = getHizbIncipit(hizb);
+  return incipit ? `الحزب ${formatNum(hizb, arabic)} — ${incipit}` : `الحزب ${formatNum(hizb, arabic)}`;
 }
 
 /** Multi-thumun span → per-surah ayah ranges (for audio + display). */
